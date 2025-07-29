@@ -1,16 +1,19 @@
-import './globals.css'
+import { Inter } from 'next/font/google';
+import './globals.css';
+
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: 'Next.js MongoDB Template',
-  description: 'A simple template with App Router, MongoDB, and shadcn/ui',
-}
+  title: 'TravelCraft - AI Travel Itinerary Planner',
+  description: 'Create personalized travel itineraries with AI-powered recommendations',
+};
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>
+      <body className={inter.className}>
         {children}
       </body>
     </html>
-  )
+  );
 }
