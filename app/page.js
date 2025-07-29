@@ -38,9 +38,13 @@ export default function App() {
 
   const handleSignIn = async () => {
     try {
-      await signInWithGoogle();
+      console.log('Starting sign-in process...');
+      const result = await signInWithGoogle();
+      console.log('Sign-in successful!', result);
     } catch (error) {
-      console.error('Sign in failed:', error);
+      console.error('Sign-in failed:', error);
+      // Show user-friendly error message
+      alert(`Sign-in failed: ${error.message}`);
     }
   };
 
