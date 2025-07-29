@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, signInWithGoogle, logout } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { AnimatedBackground } from '@/components/ui/animated-background';
 import { Chatbot } from '@/components/chatbot';
+import Markdown from 'react-markdown';
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 import { 
   Plane, 
   MapPin, 
@@ -26,6 +29,7 @@ export default function App() {
   const [showChatbot, setShowChatbot] = useState(false);
   const [generatedItinerary, setGeneratedItinerary] = useState(null);
   const [userResponses, setUserResponses] = useState(null);
+  const itineraryRef = useRef(null)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -68,6 +72,45 @@ export default function App() {
     setUserResponses(null);
   };
 
+  const handleDownloadPDF = async () => {
+    const element = itineraryRef.current;
+    const pdf = new jsPDF("p", "mm", "a4");
+    const padding = 10;
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      scrollY: -window.scrollY,
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+    const imgProps = pdf.getImageProperties(imgData);
+    const pdfWidth = pdf.internal.pageSize.getWidth() - 2 * padding;
+    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+    let position = 0;
+
+    if (pdfHeight < pageHeight) {
+      pdf.addImage(imgData, "PNG", padding, padding, pdfWidth, pdfHeight);
+    } else {
+      // Split into multiple pages
+      let heightLeft = pdfHeight;
+
+      while (heightLeft > 0) {
+        pdf.addImage(imgData, "PNG", padding, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
+        position -= pageHeight;
+
+        if (heightLeft > 0) {
+          pdf.addPage();
+        }
+      }
+    }
+
+    pdf.save(`itinerary_${userResponses?.destination}.pdf`);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -103,29 +146,36 @@ export default function App() {
         </header>
 
         {/* Itinerary Display */}
-        <main className="relative z-10 container mx-auto p-6">
+        <main className="relative z-10 container mx-auto p-6" ref={itineraryRef}>
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-8">
               <h1 className="text-4xl font-bold text-gray-800 mb-4">
-                Your Perfect Trip to {userResponses?.destination}
+                Your Perfect Trip to {userResponses?.destination.toUpperCase()}
               </h1>
               <div className="flex justify-center gap-4 text-sm text-gray-600">
                 <span className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
-                  {userResponses?.travelDates}
+                  {userResponses?.travelDates.toUpperCase()}
                 </span>
                 <span className="flex items-center gap-1">
                   <Users className="w-4 h-4" />
-                  {userResponses?.travelStyle}
+                  {userResponses?.travelStyle.toUpperCase()}
                 </span>
               </div>
             </div>
+            <button
+            onClick={handleDownloadPDF}
+            className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition"
+          >
+            {/* <Download className="w-4 h-4 mr-2" /> */}
+            Download as PDF
+          </button>
 
             <Card className="bg-white/90 backdrop-blur-sm">
               <CardContent className="p-8">
                 <div className="prose max-w-none">
                   <pre className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-                    {generatedItinerary}
+                    <Markdown>{generatedItinerary}</Markdown>
                   </pre>
                 </div>
               </CardContent>

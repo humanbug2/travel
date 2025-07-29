@@ -80,6 +80,7 @@ export function Chatbot({ onComplete }) {
       });
 
       const data = await response.json();
+      console.log(data, "data")
       if (data.success) {
         onComplete(data.itinerary, userResponses);
       } else {

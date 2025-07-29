@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
 import { generateItinerary } from '@/lib/gemini';
 import { v4 as uuidv4 } from 'uuid';
+import { collection, doc, setDoc, serverTimestamp, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase"
 
 // POST handler for generating itineraries
 export async function POST(request, { params }) {
@@ -18,53 +20,59 @@ export async function POST(request, { params }) {
           error: 'Missing required fields' 
         }, { status: 400 });
       }
+      console.log(responses, "Resp")
 
       // Generate itinerary using Gemini
       const itinerary = await generateItinerary(responses);
+      console.log(itinerary, "it")
 
-      // Save to database
-      const client = await clientPromise;
-      const db = client.db(process.env.DB_NAME);
-      const collection = db.collection('itineraries');
-
+      // Save to Firestore
+      const itineraryId = uuidv4();
       const itineraryDoc = {
-        id: uuidv4(),
+        id: itineraryId,
         responses,
         itinerary,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       };
 
-      await collection.insertOne(itineraryDoc);
+      await setDoc(doc(db, "itineraries", itineraryId), itineraryDoc);
 
       return NextResponse.json({ 
         success: true, 
         itinerary,
-        id: itineraryDoc.id
+        id: itineraryId
       });
     }
 
-    if (endpoint === 'itineraries') {
-      // Get all itineraries
-      const client = await clientPromise;
-      const db = client.db(process.env.DB_NAME);
-      const collection = db.collection('itineraries');
+    // if (endpoint === 'itineraries') {
+    //   // Get all itineraries
+    //   // const client = await clientPromise;
+    //   // const db = client.db(process.env.DB_NAME);
+    //   // const collection = db.collection('itineraries');
 
-      const itineraries = await collection
-        .find({})
-        .sort({ createdAt: -1 })
-        .limit(20)
-        .toArray();
+    //   // Get all itineraries
+    //   const querySnapshot = await getDocs(collection(db, "itineraries"));
 
-      return NextResponse.json({ 
-        success: true, 
-        itineraries: itineraries.map(item => ({
-          id: item.id,
-          destination: item.responses?.destination,
-          createdAt: item.createdAt
-        }))
-      });
-    }
+    //   const itineraries = querySnapshot.docs
+    //     .map(doc => ({
+    //       id: doc.id,
+    //       ...doc.data()
+    //     }))
+    //     .find({})
+    //     .sort({ createdAt: -1 })
+    //     .limit(20)
+    //     .toArray();
+
+    //   return NextResponse.json({ 
+    //     success: true, 
+    //     itineraries: itineraries.map(item => ({
+    //       id: item.id,
+    //       destination: item.responses?.destination,
+    //       createdAt: item.createdAt
+    //     }))
+    //   });
+    // }
 
     return NextResponse.json({ 
       success: false, 
