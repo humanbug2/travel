@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuthState } from 'react-firebase-hooks/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { auth, signInWithGoogle, logout } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -21,10 +21,20 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-  const [user, loading, error] = useAuthState(auth);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [showChatbot, setShowChatbot] = useState(false);
   const [generatedItinerary, setGeneratedItinerary] = useState(null);
   const [userResponses, setUserResponses] = useState(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleSignIn = async () => {
     try {
